@@ -47,6 +47,8 @@ void parseZscore(string input, string base) {
 	}
 
 	string part1, part2, part3;
+	int hit = 0; 
+	int miss = 0;
 
 	while(file) {
 		file >> part1;
@@ -76,12 +78,17 @@ void parseZscore(string input, string base) {
 				sum = sum + myreg.score;
 				count = count + 1;
 
-				cout << part1 << " " << part2 << " " << part3 << endl;
+				cout << "found " << part3 << ", id of " << part1 << " and score of " << part2;
+				hit++;
+				cout << " (" << hit << " out of " << (hit+miss) << ")" << endl;				
+			}
+			else {
+				miss++;
 			}
 		}
 	}
 
-	cout << "HIGHEST: " << highest_name << " with a score of " << highest << endl;
-	cout << "AVERAGE: " << count << " registers with a score of " << sum/count << endl;
 	cout << "LOWEST: " << lowest_name << " with a score of " << lowest << endl;	
+	cout << "HIGHEST: " << highest_name << " with a score of " << highest << endl;
+	cout << "AVERAGE: " << count << " registers with an avg score of " << sum/count << endl;
 }
