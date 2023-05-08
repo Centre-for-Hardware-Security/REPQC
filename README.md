@@ -26,7 +26,7 @@ If everything went fine so far, we should be able to find all 1600 register of t
 `cd work; step6.sh`
 It should print on the screen what is the lowest, average, and highest z-score of any flip-flop related to the Keccak output.
 
-## Step 7: run our algorithm pqc_re
+## Step 7: Run the pqc_re algorithm
 You can start by trying this configuration:
 `../bin/pqc_re ../results/kali.zscore ../results/kali.grouping ../results/kali.depends 64 0.3 100`
 which means 
