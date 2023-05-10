@@ -39,10 +39,11 @@ Here is a pseudo code:
 ```
 Input: Lreg, a list of registers ordered by their Z-score
 Input: Lgrp, a list of groups of registers
-Input: targetRegs, number of regs to consider;
+Input: targetRegs, number of regs to consider
 
 var regs := 0
 var winner := nil
+
 for each reg in Lreg {
 	if (reg.fanin < 64) then continue
 	for each grp in Lgrp {
@@ -55,7 +56,7 @@ for each reg in Lreg {
 		if (Lgrp.size == 1) break
 	}
 	
-	regs := reg + 1
+	regs := regs + 1
 	if (regs == targetRegs) break
 }
 
