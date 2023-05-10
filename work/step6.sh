@@ -1,1 +1,1 @@
-../bin/verifier ../results/kali.zscore KeccakCore_state_out_
+../bin/verifier ../results/kali.tool1.zscore KeccakCore_state_out_
