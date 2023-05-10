@@ -1,2 +1,1 @@
-../bin/relic --net ../bench/kali.bench --out ../results/kali.zscore --feat ../aux/features.txt
-
+../bin/relic --net ../bench/kali.tool1.bench  --out ../results/kali.tool1.zscore --feat ../aux/features.zscore.txt
