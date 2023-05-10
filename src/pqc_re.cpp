@@ -359,7 +359,7 @@ void eliminateGroupsByRegisterPath(int candidates) {
 	for (auto& it1 : myregs_zordered) {
 		vector<int> to_delete;
 		vector <string> deps;
-		deps = mydepends[it1]; 
+		deps = mydepends[it1];  
 		
 		cout << "considering " << it1 << " as target, it has " << deps.size() << " dependencies" << endl;
 
