@@ -1,1 +1,2 @@
-../bin/redpen --net ../bench/kali.bench --out ../results/kali.depends
+../bin/pqc_re ../results/kali.tool1.zscore ../results/kali.tool1.grouping ../results/kali.tool1.depends 64 333
+

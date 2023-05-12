@@ -8,6 +8,7 @@
 #include <numeric>
 #include <cmath>
 #include <limits>
+#include <chrono>
 
 using namespace std;
 
@@ -55,6 +56,8 @@ int main(int argc, char** argv) {
 		return 0;
 	}
 
+	auto start = chrono::high_resolution_clock::now();
+
 	string zscore_file = argv[1];
 	string grouping_file = argv[2];
 	string depends_file = argv[3];
@@ -78,6 +81,10 @@ int main(int argc, char** argv) {
 	eliminateMembersWithoutHits();
 	findWinnerGroup();
 
+	auto stop = chrono::high_resolution_clock::now();
+	auto duration = chrono::duration_cast<chrono::microseconds>(stop - start);
+ 
+	cout << "re_pqc took " << (float)duration.count()/1000000 << " seconds" << endl;
 	return 0; 
 }
 
@@ -524,6 +531,7 @@ void findWinnerGroup() {
 	if (mygroups.size() == 0) { // no group survived, I will just put some note on the log
 		logfile << "algorithm did not find a group :( " << endl;
 		cout << "algorithm did not find a group :( " << endl;
+		logfile.close();
 		return;
 	}
 
@@ -570,6 +578,8 @@ void findWinnerGroup() {
 			int count = 0;
 			for (auto& score : scores) {    
 				cout << count << ": " << score.first << " " << score.second << endl;
+				logfile << count << ": " << score.first << " " << score.second << endl;
+				
 				count++;
 				if (count == 64) break;
 			}
