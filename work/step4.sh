@@ -1,1 +1,2 @@
-../bin/relic_pca --net ../bench/kali.tool1.bench --out ../results/kali.tool1.grouping --feat ../aux/features.groups.txt
+echo $1
+../bin/relic_pca --net ../bench/$1.bench --out ../results/$1.grouping --feat ../aux/features.groups.txt --persplt 0.001

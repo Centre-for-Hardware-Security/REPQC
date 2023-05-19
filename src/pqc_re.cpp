@@ -12,9 +12,9 @@
 
 using namespace std;
 
-void parseZscore(string input);
-void parseGrouping(string input, int min_group_size);
-void parseDepends(string input);
+bool parseZscore(string input);
+bool parseGrouping(string input, int min_group_size);
+bool parseDepends(string input);
 
 void printGroups();
 void printShrinkGroups(float tolerance);
@@ -51,7 +51,7 @@ map<string, vector<string>> mydepends; // this is so ugly! I should hash...
 int main(int argc, char** argv) { 
 	if (argc != 6) {
 		cout << "wrong number of parameters" << std::endl;
-		cout << "the correct usage is " << argv[0] << "file.zscore file.grouping file.depends min_group_size n_candidates" << std::endl;
+		cout << "the correct usage is " << argv[0] << " file.zscore file.grouping file.depends min_group_size n_candidates" << std::endl;
 		cout << "Example: " << argv[0] << " ../results/input.zscore ../results/input.grouping ../results/input.depends 64 300" << std::endl;
 		return 0;
 	}
@@ -65,11 +65,18 @@ int main(int argc, char** argv) {
 	float tolerance = 0.0; // kept here as a reminder that some old code expects this as input
 	int candidates = atoi(argv[5]);
 	
-	parseZscore(zscore_file);
-	parseGrouping(grouping_file, min_group_size);
-	parseDepends(depends_file);
+	bool ret;
+	ret = parseZscore(zscore_file);
+	if (!ret) return 0;
 
-	// this is strategy 1, it works if the groups can be divided very close to the word size of 64bits
+	ret = parseGrouping(grouping_file, min_group_size);	
+	if (!ret) return 0;
+
+	ret = parseDepends(depends_file);
+	if (!ret) return 0;
+
+	// this is strategy 1, it works if the groups can be divided very close to the word size of 64bits and the entire 64-bit register lies in the same group
+	// this strategy fails it the groups become fractioned 
 	//printShrinkGroups(tolerance);
 	//findStuff(candidates);
 	//printGroupHits();
@@ -88,11 +95,11 @@ int main(int argc, char** argv) {
 	return 0; 
 }
 
-void parseZscore(string input) {
+bool parseZscore(string input) {
 	std::ifstream file(input);
 	if (!file) {
 		std::cout << "error opening file" << input << std::endl;
-		return;
+		return false;
 	}
 	else {
 		cout << "reading " << input << " ..." << endl;
@@ -122,13 +129,14 @@ void parseZscore(string input) {
 		}
 	}
 	cout << "done parsing scores for a total of " << myregs.size() << " regs" << endl;
+	return true;
 }
 
-void parseGrouping(string input, int min_group_size) {
+bool parseGrouping(string input, int min_group_size) {
 	std::ifstream file(input);
 	if (!file) {
 		std::cout << "error opening file" << input << std::endl;
-		return;
+		return false;
 	}
 	else {
 		cout << "reading " << input << " ..." << endl;
@@ -157,13 +165,14 @@ void parseGrouping(string input, int min_group_size) {
 		}
 	}
 	cout << "done parsing groups, considered " << mygroups.size() << " groups out of " << count << endl;
+	return true;
 }
 
-void parseDepends(string input) {
+bool parseDepends(string input) {
 	std::ifstream file(input);
 	if (!file) {
 		std::cout << "error opening file" << input << std::endl;
-		return;
+		return false;
 	}
 	else {
 		cout << "reading " << input << " ..." << endl;
@@ -188,6 +197,7 @@ void parseDepends(string input) {
 		}
 	}
 	cout << "done parsing depends file for a total of " << count << " dependencies" << endl;
+	return true;
 }
 
 
@@ -373,6 +383,12 @@ void eliminateGroupsByRegisterPath(int candidates) {
 	for (auto& it1 : myregs_zordered) {
 		vector<int> to_delete;
 		vector <string> deps;
+
+		if (regcount == candidates) { // reached the number of candidates regs to be considered
+			cout << "a total of " << regcount << " candidates were considered" << endl; 
+			break;
+		}
+
 		deps = mydepends[it1];  
 		
 		cout << "-------------------------------------------------------------- " << endl;
@@ -380,8 +396,15 @@ void eliminateGroupsByRegisterPath(int candidates) {
 
 		if (deps.size() < 64) {
 			cout << "dropped!" << endl;
+			regcount++;
 			continue;
 		}; // this could be much smarter, actually 64 is a soft number.
+
+		if (deps.size() > 90) {
+			cout << "dropped!" << endl;
+			regcount++;
+			continue;
+		}; // this could be much smarter
 		cout << endl;
 
 		for (auto it2 = mygroups.begin(); it2 != mygroups.end(); it2++) {
@@ -433,10 +456,9 @@ void eliminateGroupsByRegisterPath(int candidates) {
 		}
 		else {
 			cout << "ALGORITHM ended, will stop trying new regs!" << endl;
+			cout << "a total of " << regcount << " candidates were considered" << endl; 
 			return;
 		}
-
-		if (regcount == candidates) {break;}; // reached the number of candidates regs to be considered
 	}
 }
 
@@ -577,14 +599,45 @@ void findWinnerGroup() {
 	
 			int count = 0;
 			for (auto& score : scores) {    
-				cout << count << ": " << score.first << " " << score.second << endl;
-				logfile << count << ": " << score.first << " " << score.second << endl;
+				cout << count << ": " << score.first << " " << score.second << " " << myregs[score.second].hits << endl;
+				logfile << count << ": " << score.first << " " << score.second << " " << myregs[score.second].hits << endl;
 				
 				count++;
-				if (count == 64) break;
 			}
 		}
 	
+	}
+
+	for (auto& it1 : mygroups) {
+		if (it1.id == g_id) {
+			map<float, int> table;
+			
+			for (auto& it2 : it1.members) {
+				float reference = myregs[it2].score;
+			
+				if (table.find(reference) == table.end()) {// meaning the table does not contain an occurence for reference
+					table[reference] = 0;
+			
+					for (auto& it3 : it1.members) { // 
+						float candidate = myregs[it3].score;
+						if (candidate == reference) {
+							table[reference]++;
+						}
+					}
+				}
+			}
+	
+
+			int freq = 0;
+			float score = 0.0;
+			for(const auto& elem : table) {
+				cout << "table: " << elem.first << " " << elem.second << "\n"; // reg name | z-score | frequency of the z-score
+				if (elem.second > freq) { 
+					freq = elem.second;
+					score = elem.first;
+				}
+			}
+		}
 	}
 
 	logfile.close();

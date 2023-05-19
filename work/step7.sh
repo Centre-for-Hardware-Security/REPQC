@@ -1,2 +1,3 @@
-../bin/pqc_re ../results/kali.tool1.zscore ../results/kali.tool1.grouping ../results/kali.tool1.depends 64 333
+echo $1 $2 $3
+../bin/pqc_re ../results/$1.zscore ../results/$1.grouping ../results/$1.depends $2 $3
 
