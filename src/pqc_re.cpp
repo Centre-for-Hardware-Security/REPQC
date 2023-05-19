@@ -407,6 +407,7 @@ void eliminateGroupsByRegisterPath(int candidates) {
 		}; // this could be much smarter
 		cout << endl;
 
+		bool all_failed = true;
 		for (auto it2 = mygroups.begin(); it2 != mygroups.end(); it2++) {
 			int hits = 0;
 			int misses = 0;
@@ -434,6 +435,7 @@ void eliminateGroupsByRegisterPath(int candidates) {
 				to_delete.push_back(it2->id);			
 			}
 			else { // probably not needed anymore
+				all_failed = false;
 				if (hits==1) {
 					it2->uniques++;
 				}
@@ -444,20 +446,25 @@ void eliminateGroupsByRegisterPath(int candidates) {
 		}
 		regcount++;
 
-		if ( (mygroups.size() - to_delete.size()) >= 1) { // meaning I can delete and there will still be something left
-			for (auto it3 : to_delete) {
-				for (auto it2 = mygroups.begin(); it2 != mygroups.end(); ) {
-					if (it2->id == it3) {
-						it2 = mygroups.erase(it2);
-					}
-					else { it2++;}
-				}
-			}
+		if (all_failed) {
+			continue;
 		}
 		else {
-			cout << "ALGORITHM ended, will stop trying new regs!" << endl;
-			cout << "a total of " << regcount << " candidates were considered" << endl; 
-			return;
+			if ( (mygroups.size() - to_delete.size()) >= 1 ) { // meaning I can delete and there will still be something left
+				for (auto it3 : to_delete) {
+					for (auto it2 = mygroups.begin(); it2 != mygroups.end(); ) {
+						if (it2->id == it3) {
+							it2 = mygroups.erase(it2);
+						}
+						else { it2++;}
+					}
+				}
+			}
+			else {
+				cout << "ALGORITHM ended, will stop trying new regs!" << endl;
+				cout << "a total of " << regcount << " candidates were considered" << endl; 
+				return;
+			}
 		}
 	}
 }
@@ -599,7 +606,9 @@ void findWinnerGroup() {
 	
 			int count = 0;
 			for (auto& score : scores) {    
-				cout << count << ": " << score.first << " " << score.second << " " << myregs[score.second].hits << endl;
+				if (count < 64) {
+					cout << count << ": " << score.first << " " << score.second << " " << myregs[score.second].hits << endl;
+				}
 				logfile << count << ": " << score.first << " " << score.second << " " << myregs[score.second].hits << endl;
 				
 				count++;
@@ -631,7 +640,7 @@ void findWinnerGroup() {
 			int freq = 0;
 			float score = 0.0;
 			for(const auto& elem : table) {
-				cout << "table: " << elem.first << " " << elem.second << "\n"; // reg name | z-score | frequency of the z-score
+				//cout << "table: " << elem.first << " " << elem.second << "\n"; // reg name | z-score | frequency of the z-score
 				if (elem.second > freq) { 
 					freq = elem.second;
 					score = elem.first;
