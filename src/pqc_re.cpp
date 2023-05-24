@@ -391,21 +391,22 @@ void eliminateGroupsByRegisterPath(int candidates) {
 
 		deps = mydepends[it1];  
 		
-		cout << "-------------------------------------------------------------- " << endl;
 		cout << "considering " << it1 << " as target, it has a fanin of " << deps.size()  << " ... ";
 
-		if (deps.size() < 64) {
+		if (deps.size() <= 64) {
 			cout << "dropped!" << endl;
 			regcount++;
 			continue;
 		}; // this could be much smarter, actually 64 is a soft number.
 
-		if (deps.size() > 90) {
+		if (deps.size() > 84) {
 			cout << "dropped!" << endl;
 			regcount++;
 			continue;
 		}; // this could be much smarter
 		cout << endl;
+	
+		cout << "-------------------------------------------------------------- " << endl;
 
 		bool all_failed = true;
 		for (auto it2 = mygroups.begin(); it2 != mygroups.end(); it2++) {
@@ -445,6 +446,8 @@ void eliminateGroupsByRegisterPath(int candidates) {
 			}			
 		}
 		regcount++;
+		cout << "-------------------------------------------------------------- " << endl;
+
 
 		if (all_failed) {
 			continue;
