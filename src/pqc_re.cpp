@@ -9,6 +9,7 @@
 #include <cmath>
 #include <limits>
 #include <chrono>
+#include "params.h"
 
 using namespace std;
 
@@ -24,6 +25,7 @@ void eliminateGroupsByRegisterPath(int candidates);
 void eliminateGroupsByLowNumber();
 void eliminateMembersWithoutHits();
 void findWinnerGroup();
+void findWinnerIndiv();
 
 struct reg {
 	int id;
@@ -46,7 +48,10 @@ struct group {
 map<string, reg> myregs;
 vector<string> myregs_zordered;
 vector<group> mygroups;
-map<string, vector<string>> mydepends; // this is so ugly! I should hash...
+map<string, vector<string>> fanin; // this is so ugly! I should hash...
+map<string, vector<string>> fanout; // this is so ugly! I should hash...
+
+int min_group_size;
 
 int main(int argc, char** argv) { 
 	if (argc != 6) {
@@ -61,7 +66,7 @@ int main(int argc, char** argv) {
 	string zscore_file = argv[1];
 	string grouping_file = argv[2];
 	string depends_file = argv[3];
-	int min_group_size = atoi(argv[4]);
+	min_group_size = atoi(argv[4]);
 	float tolerance = 0.0; // kept here as a reminder that some old code expects this as input
 	int candidates = atoi(argv[5]);
 	
@@ -76,17 +81,28 @@ int main(int argc, char** argv) {
 	if (!ret) return 0;
 
 	// this is strategy 1, it works if the groups can be divided very close to the word size of 64bits and the entire 64-bit register lies in the same group
-	// this strategy fails it the groups become fractioned 
+	// this strategy fails if the groups become fractioned, which unfortunately happens quite easily 
 	//printShrinkGroups(tolerance);
 	//findStuff(candidates);
 	//printGroupHits();
 
-	// this is strategy 2, it works by eliminating groups based on z-score ordering. it works well if the keccak state registers are at the top of the list
-	printGroups();
-	eliminateGroupsByRegisterPath(candidates);
-	eliminateGroupsByLowNumber();
-	eliminateMembersWithoutHits();
-	findWinnerGroup();
+	// this is strategy 2, it works by eliminating groups based on z-score ordering. it works well if the keccak state registers are either at the top of the list
+	// or they look very different from other regs
+	#ifdef STRAT_G
+		printGroups();
+		eliminateGroupsByRegisterPath(candidates);
+		eliminateGroupsByLowNumber();
+		eliminateMembersWithoutHits();
+		findWinnerGroup();
+	#endif
+
+	// this is strat 3, works for masked
+	#ifdef STRAT_I
+		printGroups();
+		eliminateGroupsByRegisterPath(candidates);
+		eliminateMembersWithoutHits();
+		findWinnerIndiv();
+	#endif
 
 	auto stop = chrono::high_resolution_clock::now();
 	auto duration = chrono::duration_cast<chrono::microseconds>(stop - start);
@@ -187,13 +203,22 @@ bool parseDepends(string input) {
 		file >> part3; // destination
 		count++;
 
-		if (mydepends.find(part3) == mydepends.end()) {// meaning the map does not contain an entry for this reg yet
-			vector<string> temp;
-			temp.push_back(part1);
-			mydepends[part3] = temp;
+		if (fanin.find(part3) == fanin.end()) {// meaning the map does not contain an entry for this reg yet
+			vector<string> temp_fanin;
+			temp_fanin.push_back(part1);
+			fanin[part3] = temp_fanin;
 		}
 		else {
-			mydepends[part3].push_back(part1);
+			fanin[part3].push_back(part1);
+		}
+
+		if (fanout.find(part1) == fanin.end()) {// meaning the map does not contain an entry for this reg yet
+			vector<string> temp_fanout;
+			temp_fanout.push_back(part3);
+			fanout[part1] = temp_fanout;
+		}
+		else {
+			fanout[part1].push_back(part3);
 		}
 	}
 	cout << "done parsing depends file for a total of " << count << " dependencies" << endl;
@@ -343,7 +368,7 @@ void findStuff(int candidates) {
 
 	for (auto& it1 : myregs_zordered) {
 		vector <string> deps;
-		deps = mydepends[it1];
+		deps = fanin[it1];
 		
 		//cout << "considering " << it1 << " as target. it has " << deps.size() << " dependencies" << endl;
 
@@ -379,32 +404,56 @@ void findStuff(int candidates) {
 
 void eliminateGroupsByRegisterPath(int candidates) {
 	int regcount = 0;
+	int considered = 0;
+
+	ofstream logfile;
+	logfile.open ("../work/candidates.log");
 
 	for (auto& it1 : myregs_zordered) {
 		vector<int> to_delete;
 		vector <string> deps;
 
 		if (regcount == candidates) { // reached the number of candidates regs to be considered
-			cout << "a total of " << regcount << " candidates were considered" << endl; 
 			break;
 		}
 
-		deps = mydepends[it1];  
+		deps = fanin[it1];  
 		
-		cout << "considering " << it1 << " as target, it has a fanin of " << deps.size()  << " ... ";
+		cout << "analyzing " << it1 << " as target. fanin " << deps.size()  << ", fanout " << fanout[it1].size() << ", z-score  " << myregs[it1].score << ". ";
 
-		if (deps.size() <= 64) {
+		//if (myregs[it1].score >= 1.0) break; // TODO: I am not sure this always works well, but it would eliminate any reg that is obviously control oriented
+		// for now it is not being used. it would speed up the execution time...
+
+		if (deps.size() < FANIN_FLOOR) {
 			cout << "dropped!" << endl;
 			regcount++;
 			continue;
 		}; // this could be much smarter, actually 64 is a soft number.
 
-		if (deps.size() > 84) {
+		if (deps.size() > FANIN_CEILING) {
 			cout << "dropped!" << endl;
 			regcount++;
 			continue;
 		}; // this could be much smarter
+
+		deps = fanout[it1];
+		if (deps.size() < FANOUT_FLOOR) {
+			cout << "dropped!" << endl;
+			regcount++;
+			continue;
+		}; // this could be much smarter, actually 64 is a soft number.
+
+		if (deps.size() > FANOUT_CEILING) {
+			cout << "dropped!" << endl;
+			regcount++;
+			continue;
+		}; // this could be much smarter
+
+		deps = fanin[it1];
+
 		cout << endl;
+
+		logfile << "analyzing " << it1 << " as target. fanin " << deps.size()  << ", fanout " << fanout[it1].size() << ", z-score  " << myregs[it1].score << endl;
 	
 		cout << "-------------------------------------------------------------- " << endl;
 
@@ -412,30 +461,39 @@ void eliminateGroupsByRegisterPath(int candidates) {
 		for (auto it2 = mygroups.begin(); it2 != mygroups.end(); it2++) {
 			int hits = 0;
 			int misses = 0;
-			for (auto& it3 : it2->members ) {
+			for (auto it3 = it2->members.begin(); it3 != it2->members.end(); ) {
 				// check if member it3 of group it2 has a path to reg it1
 				//cout << "checking if " << it3 << " has a path to " << it1 << endl;
 
-				if (it1 == it3) { // checking if there is a path from reg_x to reg_x is useless
-					hits = 0;
-					break;
+				if (it1 == *it3) { // checking if there is a path from reg_123 to reg_123 is useless?
+					it3 = it2->members.erase(it3);
+					//hits = 0;
+					continue;
 				}
 
-				if ( find(deps.begin(), deps.end(), it3) != deps.end() ) {
+				if ( find(deps.begin(), deps.end(), *it3) != deps.end() ) {
 					hits++;
-					myregs[it3].hits++;
+					myregs[*it3].hits++;
 				}
 				else {
 					misses++;
 				}
+				it3++;
 			}
 
-			cout << "group " << it2->id << " finished with " << hits << " hits and " << misses << " misses" << endl;
 			if (hits==0) {
-				cout << "group " << it2->id << " is marked for deletion " << endl;
-				to_delete.push_back(it2->id);			
+				#ifdef PRINT_DETAILS
+					cout << "group " << it2->id << " H/M " << hits << "/" << misses;
+					cout << " (deletion)" << endl;
+				#endif
+				//to_delete.push_back(it2->id);		// you cannot enable this if the target registers are spread in different groups
 			}
 			else { // probably not needed anymore
+				#ifdef PRINT_DETAILS
+					cout << "group " << it2->id << " H/M " << hits << "/" << misses;
+					cout << endl;
+				#endif
+
 				all_failed = false;
 				if (hits==1) {
 					it2->uniques++;
@@ -446,14 +504,13 @@ void eliminateGroupsByRegisterPath(int candidates) {
 			}			
 		}
 		regcount++;
-		cout << "-------------------------------------------------------------- " << endl;
-
 
 		if (all_failed) {
 			continue;
 		}
 		else {
-			if ( (mygroups.size() - to_delete.size()) >= 1 ) { // meaning I can delete and there will still be something left
+			considered++;
+			if ( (mygroups.size() - to_delete.size()) > 0 ) { // meaning I can delete and there will still be something left
 				for (auto it3 : to_delete) {
 					for (auto it2 = mygroups.begin(); it2 != mygroups.end(); ) {
 						if (it2->id == it3) {
@@ -465,11 +522,18 @@ void eliminateGroupsByRegisterPath(int candidates) {
 			}
 			else {
 				cout << "ALGORITHM ended, will stop trying new regs!" << endl;
-				cout << "a total of " << regcount << " candidates were considered" << endl; 
-				return;
+				break;
 			}
 		}
 	}
+
+	cout << "-------------------------------------------------------------- " << endl;
+	cout << "a total of " << regcount << " candidates were analyzed"; 
+	cout << " but only " << considered << " were considered" << endl;
+
+	logfile.close();
+
+	return;
 }
 
 void eliminateGroupsByLowNumber() {
@@ -479,8 +543,8 @@ void eliminateGroupsByLowNumber() {
 	int highest_score = 0;
 	cout << "----------------------------------------" << endl;
 	logfile << "----------------------------------------" << endl;
-	cout << "considering LOW REG COUNT! any group that survived without at least 64 members in it will be deleted" << endl;
-	logfile << "considering LOW REG COUNT! any group that survived without at least 64 members in it will be deleted" << endl;
+	cout << "considering LOW REG COUNT! any group that survived without at least " << min_group_size << " members in it will be deleted" << endl;
+	logfile << "considering LOW REG COUNT! any group that survived without at least " << min_group_size << " members in it will be deleted" << endl;
 
 	for (auto it1 = mygroups.begin(); it1 != mygroups.end(); ) {
 		int hits = 0;
@@ -490,7 +554,7 @@ void eliminateGroupsByLowNumber() {
 			}
 		}
 
-		if (hits < 64) {
+		if (hits < min_group_size) {
 			cout << "group " << it1->id << " will be eliminated" << endl;
 			logfile << "group " << it1->id << " will be eliminated" << endl;
 			it1 = mygroups.erase(it1);
@@ -607,11 +671,15 @@ void findWinnerGroup() {
 				//scores[myregs[it2].score] = it2;
 			}
 	
-			int count = 0;
+			int count = 1;
 			for (auto& score : scores) {    
-				if (count < 64) {
-					cout << count << ": " << score.first << " " << score.second << " " << myregs[score.second].hits << endl;
+				if (count < 10) {
+					cout << "candidate " << count << ": " << score.first << " " << score.second << " " << myregs[score.second].hits <<  " " << fanin[score.second].size() << " " << fanout[score.second].size() << endl;
 				}
+				else if (count <= 64) {
+					cout << "candidate " << count << ": " << score.first << " " << score.second << " " << myregs[score.second].hits <<  " " << fanin[score.second].size() << " " << fanout[score.second].size() << endl;
+				}
+
 				logfile << count << ": " << score.first << " " << score.second << " " << myregs[score.second].hits << endl;
 				
 				count++;
@@ -652,6 +720,45 @@ void findWinnerGroup() {
 		}
 	}
 
+	logfile.close();
+}
+
+void findWinnerIndiv() {
+	ofstream logfile;
+	logfile.open ("../work/result.log");
+
+	if (mygroups.size() == 0) { // no group survived, I will just put some note on the log
+		logfile << "algorithm did not find a group :( " << endl;
+		cout << "algorithm did not find a group :( " << endl;
+		logfile.close();
+		return;
+	}
+
+	float lowest_sum = std::numeric_limits<float>::max(); // highest possible float
+	float lowest_g = std::numeric_limits<float>::max(); // highest group score
+	int g_id;
+	int survivors = 0;
+	multimap<float, string> scores;
+
+	for (auto& it1 : mygroups) {
+		float sum = 0.0;
+
+		for (auto& it2 : it1.members) {
+			if (myregs[it2].hits > 0) {
+				logfile << "reg " << it2 << " " << myregs[it2].score << " " << myregs[it2].hits << endl;
+				scores.insert(pair<float,string>(myregs[it2].score, it2));
+				survivors++;
+			}
+		}
+	}
+
+	for (auto& score : scores) {    
+		if (myregs[score.second].hits <= THRESHOLD) {
+			cout << "candidate " << ": " << score.first << " " << score.second << " " << myregs[score.second].hits <<  " " << fanin[score.second].size() << " " << fanout[score.second].size() << endl;
+		}
+	}
+
+	cout << "total survivors: " << survivors << endl;
 	logfile.close();
 }
 
