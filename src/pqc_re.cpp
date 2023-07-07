@@ -14,7 +14,7 @@
 using namespace std;
 
 bool parseZscore(string input);
-bool parseGrouping(string input, int min_group_size);
+bool parseGrouping(string input);
 bool parseDepends(string input);
 
 void printGroups();
@@ -48,9 +48,10 @@ struct group {
 map<string, reg> myregs;
 vector<string> myregs_zordered;
 vector<group> mygroups;
-map<string, vector<string>> fanin; // this is so ugly! I should hash...
-map<string, vector<string>> fanout; // this is so ugly! I should hash...
+map<string, vector<string>> fanin; // hash would make this much faster...
+map<string, vector<string>> fanout; // hash would make this much faster...
 
+// global for simplicity
 int min_group_size;
 
 int main(int argc, char** argv) { 
@@ -74,14 +75,14 @@ int main(int argc, char** argv) {
 	ret = parseZscore(zscore_file);
 	if (!ret) return 0;
 
-	ret = parseGrouping(grouping_file, min_group_size);	
+	ret = parseGrouping(grouping_file);	
 	if (!ret) return 0;
 
 	ret = parseDepends(depends_file);
 	if (!ret) return 0;
 
 	// this is strategy 1, it works if the groups can be divided very close to the word size of 64bits and the entire 64-bit register lies in the same group
-	// this strategy fails if the groups become fractioned, which unfortunately happens quite easily 
+	// this strategy fails if the groups become fractioned, which  happens quite easily. we have abandoned this strategy. 
 	//printShrinkGroups(tolerance);
 	//findStuff(candidates);
 	//printGroupHits();
@@ -148,7 +149,7 @@ bool parseZscore(string input) {
 	return true;
 }
 
-bool parseGrouping(string input, int min_group_size) {
+bool parseGrouping(string input) {
 	std::ifstream file(input);
 	if (!file) {
 		std::cout << "error opening file" << input << std::endl;
