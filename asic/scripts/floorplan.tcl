@@ -4,7 +4,8 @@ setPlanDesignMode -macroSpacing 10
 setPlanDesignMode -minMacroToCoreSpace 5
 setPlanDesignMode -util 0.75
 
-# you can change core_x and core_y, the others should remain the same. the considered values in the paper are 470x670 and 540x670.
+# you can change CORE_X and CORE_Y, the others should remain the same. 
+# the considered values in the paper are 460x670 (area-effciient) and 540x670 (speed-efficient)
 set FP_RING_OFFSET 1
 set FP_RING_WIDTH 2
 set FP_RING_SPACE 1
@@ -31,15 +32,16 @@ planDesign -constraints template.txt
 
 win
 
+# the commands that follow are for visualization only. they highlight memories in cyan color, keccak in blue
 setLayerPreference node_blockage -isVisible 0
 
 dehighlight
 deselectAll
-selectInst *CORE_BR_*BR1
-selectInst *CORE_BR_*BR2
-selectInst *CORE_BR_*BR3
-selectInst *CORE_BR_*BR4
-selectInst *CORE_BR_*BR5
+selectInst *CORE/BR_*BR1
+selectInst *CORE/BR_*BR2
+selectInst *CORE/BR_*BR3
+selectInst *CORE/BR_*BR4
+selectInst *CORE/BR_*BR5
 highlight -index 56
 deselectAll
 
