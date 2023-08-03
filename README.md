@@ -1,5 +1,5 @@
 # REPQC
-Reverse engineering post-quantum cryptography in order to insert hardware trojans
+Reverse engineering post-quantum cryptography in order to insert hardware trojans!
 
 ## Step 1: synthesize your favorite PQC core
 Instructions are provided in https://github.com/Centre-for-Hardware-Security/v2bench 
