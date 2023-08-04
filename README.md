@@ -1,6 +1,8 @@
 # REPQC
 Reverse engineering post-quantum cryptography in order to insert hardware trojans!
 
+If you want to use the bench files provided with this repository, skip to step 3. If you want to generate your own, follow steps 1 and 2.
+
 ## Step 1: synthesize your favorite PQC core
 Instructions are provided in https://github.com/Centre-for-Hardware-Security/v2bench 
 There is a synthesis script template for Cadence Genus. Run it by executing: `genus -files synth.tcl`. Notice that some changes might be required to reflect the cell naming of your standard cell library. Look for the `dont_use` statements in the synthesis script.
