@@ -10,7 +10,7 @@ kali_v2 is a kyber + dilithium combo design. it was synthesized with a commercia
 kali_v3 is a kyber + dilithium combo design. it was synthesized with a commercial synthesis tool from Vendor #2. "without memory". no retiming.
 
 ## kali_v4
-kali_v4 is a kyber+dilithium combo design. it was synthesized with a commercial synthesis from Vendor #1. it was retimed.
+kali_v4 is a kyber + dilithium combo design. it was synthesized with a commercial synthesis tool from Vendor #1. it was retimed.
 
 ## saber_v1
 saber_v1 was synthesized with a commercial synthesis tool from Vendor #1. "without memory". no retiming.
