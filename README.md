@@ -1,5 +1,22 @@
 # REPQC
-Reverse engineering post-quantum cryptography in order to insert hardware trojans!
+This is a tool to reverse engineer netlists that implement post-quantum cryptography. It enables a form of automated hardware trojan insertion. It was published in ASIACCS'24.
+
+How to cite:
+
+```@inproceedings{10.1145/3634737.3657016,
+author = {Pagliarini, Samuel and Aikata, Aikata and Imran, Malik and Sinha Roy, Sujoy},
+title = {REPQC: Reverse Engineering and Backdooring Hardware Accelerators for Post-quantum Cryptography},
+year = {2024},
+isbn = {9798400704826},
+publisher = {Association for Computing Machinery},
+address = {New York, NY, USA},
+doi = {10.1145/3634737.3657016},
+booktitle = {Proceedings of the 19th ACM Asia Conference on Computer and Communications Security},
+pages = {533–547},
+numpages = {15},
+series = {ASIA CCS '24}
+}
+```
 
 If you want to use the bench files provided with this repository, skip to step 3. If you want to generate your own, follow steps 1 and 2.
 
